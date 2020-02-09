@@ -1,0 +1,126 @@
+import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.filechooser.FileSystemView;
+import java.io.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Scanner;
+
+public class File_Comparator {
+
+    static Map<String, Integer> uniqueValuesForOnprem = new HashMap<>();
+    static Map<String, Integer> uniqueValuesForAzure = new HashMap<>();
+    static Map<HashMap<String, Integer>, HashMap<String, Integer>> valuesInCommonButHaveDiffQuntity = new HashMap();
+    static int processedRowsOnPrem = 0;
+    static int processedRowsInAzure = 0;
+    static int matchedValues = 0;
+
+    public static void main(String[] args) {
+        String onPremPath = fileSelector();
+        String azurePath = fileSelector();
+        Map<String, Integer> onPremMap = fileReader(onPremPath);
+        Map<String, Integer> azureMap = fileReader(azurePath);
+
+        //  process on-prem file
+
+        for(String keyInOnprem: onPremMap.keySet()){
+            processedRowsOnPrem++;
+            if (azureMap.containsKey(keyInOnprem)){
+                if(onPremMap.get(keyInOnprem) != azureMap.get(keyInOnprem)){
+                    HashMap<String, Integer> onPremMapVer = new HashMap<>();
+                    HashMap<String, Integer> azureMapVer = new HashMap<>();
+                    onPremMapVer.put(keyInOnprem, onPremMap.get(keyInOnprem));
+                    azureMapVer.put(keyInOnprem, azureMap.get(keyInOnprem));
+                    valuesInCommonButHaveDiffQuntity.put(onPremMapVer, azureMapVer);
+                } else{
+                    matchedValues++;
+                }
+            }
+            else{
+                uniqueValuesForOnprem.put(keyInOnprem, onPremMap.get(keyInOnprem));
+            }
+        }
+
+
+        for(String keyInAzure: azureMap.keySet()){
+            processedRowsInAzure++;
+            if (!onPremMap.containsKey(keyInAzure)){
+                uniqueValuesForAzure.put(keyInAzure, azureMap.get(keyInAzure));
+            }
+        }
+
+        if (!(uniqueValuesForOnprem.isEmpty()) || !(uniqueValuesForAzure.isEmpty()) || !(valuesInCommonButHaveDiffQuntity.isEmpty())) {
+            try (BufferedWriter logFile = new BufferedWriter(new FileWriter("C:\\Users\\User\\Desktop\\Mismatch.txt"))) {
+                if (!(uniqueValuesForOnprem.isEmpty())) {
+                    logFile.write("The values unique for on-prem: \n");
+                    for (String value : uniqueValuesForOnprem.keySet()) {
+                        logFile.write(value + " " + uniqueValuesForOnprem.get(value) + "\n");
+                    }
+                }
+
+                if(!(uniqueValuesForAzure.isEmpty())) {
+                    logFile.write("The values unique for azure: \n");
+                    for (String value : uniqueValuesForAzure.keySet()) {
+                        logFile.write(value + " " + uniqueValuesForAzure.get(value) + "\n");
+                    }
+                }
+
+                if(!(valuesInCommonButHaveDiffQuntity.isEmpty())) {
+                    logFile.write("The values that are in both envs BUT have different numbers: \n");
+                    for (HashMap<String, Integer> onPremV : valuesInCommonButHaveDiffQuntity.keySet()) {
+                        for(String value: onPremV.keySet()){
+                            logFile.write(value + "\t"
+                                    + onPremV.get(value) + "\t" +
+                                    valuesInCommonButHaveDiffQuntity.get(onPremV).get(value));
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+
+
+        System.out.println("Processed rows in On-Prem: " + processedRowsOnPrem);
+        System.out.println("Processed rows in Azure: " + processedRowsInAzure);
+        System.out.println("Matched values in both: " + matchedValues);
+
+
+
+
+    }
+
+    public static  String fileSelector(){
+        String filePath = null;
+        JFileChooser jfc = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
+        jfc.setDialogTitle("Select csv file");
+        jfc.setAcceptAllFileFilterUsed(false);
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("CSV, XLXS files", "csv", "xlsx");
+        jfc.addChoosableFileFilter(filter);
+
+        int returnValue = jfc.showOpenDialog(null);
+        if (returnValue == JFileChooser.APPROVE_OPTION) {
+            filePath = jfc.getSelectedFile().getPath();
+        }
+
+        return filePath;
+
+    }
+
+    public static Map<String, Integer> fileReader (String path) {
+        Map<String, Integer> map = new HashMap<>();
+        try(Scanner scanner = new Scanner(new BufferedReader(new FileReader(path)))) {
+            while(scanner.hasNextLine()) {
+                String line = scanner.nextLine();
+                String[] lines = line.split("\t");
+//                System.out.println("Col1: " + lines[0] + " " + lines[1]);
+                map.put(lines[0], Integer.valueOf(lines[1]));
+            }
+
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
+        return map;
+    }
+}
