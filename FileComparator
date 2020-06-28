@@ -26,7 +26,7 @@ public class File_Comparator {
         for(String keyInOnprem: onPremMap.keySet()){
             processedRowsOnPrem++;
             if (azureMap.containsKey(keyInOnprem)){
-                if(onPremMap.get(keyInOnprem) != azureMap.get(keyInOnprem)){
+                if(((int) onPremMap.get(keyInOnprem)) !=( (int) azureMap.get(keyInOnprem))){
                     HashMap<String, Integer> onPremMapVer = new HashMap<>();
                     HashMap<String, Integer> azureMapVer = new HashMap<>();
                     onPremMapVer.put(keyInOnprem, onPremMap.get(keyInOnprem));
